@@ -1,0 +1,90 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<style type="text/css">
+	:root {
+		--fg: #222;
+		--a: #11BB44;
+		--ahover: #22DD55;
+	}
+	body {
+		background: #FFF;
+		font: 14px Arial;
+		color: var(--fg);
+		margin: 0px;
+	}
+	h1,h2,h3,h4 {
+		font-weight: normal;
+		margin: 5px 0px 5px 0px;
+	}
+	h1 {
+		margin: 0px;
+		padding: 10px 0px 10px 20px;
+	}
+	h2 {
+		border-bottom: 1px solid var(--fg);
+		padding-bottom: 5px;
+	}
+	h3 {
+		margin-top: 10px;
+	}
+	pre {
+		background: #F9F9F9;
+		border: 1px solid #DDD;
+		padding: 5px;
+		margin: 0px;
+	}
+	a,a:visited {
+		text-decoration: none;
+		color: var(--a);
+	}
+	a:hover {
+		color: var(--ahover);
+	}
+	div.head {
+		color: #FFF;
+		background: var(--fg);
+		border-bottom: 2px solid var(--a);
+		padding-bottom: 10px;
+	}
+	div.links {
+		border-top: 1px solid #444;
+		border-bottom: 1px solid #444;
+		padding: 5px 0px 5px 20px;
+	}
+	div.links a,a:visited {
+		padding: 5px;
+		border-right: 1px solid #444;
+	}
+	div.links a:hover,a.active {
+		background: #333;
+	}
+	div.links a.first {
+		border-left: 1px solid #444;
+	}
+	div.links a.activefirst {
+		border-left: 1px solid #444;
+		background: #333;
+	}
+	div.main {
+		padding: 15 20 20 20px;
+	}
+	</style>
+	<title>
+$TITLE
+	</title>
+</head>
+<body>
+	<div class=head>
+		<h1>
+$TITLE
+		</h1>
+		<div class=links>
+$PAGES
+		</div>
+	</div>
+	<div class=main>
+$CONTENT
+	</div>
+</body>
+</html>

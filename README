@@ -1,0 +1,30 @@
+Plaintext
+=========
+Plaintext is a markup language for creating formatted
+web sites without writing any formatting at all.
+The project is just recently started and should not be used yet.
+Please use the bundled style.html only as an example.
+
+How it works
+------------
+* First you need to install plaintext interpreter:
+$ make
+$ make install
+* Then configure httpd like this:
+cgi.assign = ( ".pt"  => "/usr/bin/plaintext" )
+* Then put a simple style.html file to your htdocs:
+$TITLE gets replaced by site name.
+$PAGES gets replaced by list of links to all pages.
+$CONTENT gets replaced by the document.
+* Now just create .pt files in plain text and your site is ready to access.
+
+Syntax
+------
+* URL => html link.
+* URL to image => linked html image.
+* $PAGES => links to all .pt files in the current directory
+* Heading <h2> = First line after empty line
+* Heading <h3> = Short lines not ending to ".".
+* Line break <br> = line break \n
+* Code block <pre> = lines starting with "$ " (shell command).
+* List item <li> = line starting with "* "
