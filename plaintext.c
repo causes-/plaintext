@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 #include <dirent.h>
 #include <sys/types.h>
 
@@ -13,9 +14,9 @@
 
 static char *stylefile = "./style.html";
 
-bool endsto(char *str, char *str2, int n) {
-	if (n)
-		str += n - strlen(str2);
+bool endsto(char *str, int slen, char *str2) {
+	if (slen)
+		str += slen - strlen(str2);
 	else
 		str += strlen(str) - strlen(str2);
 	return !strncmp(str, str2, strlen(str2));
@@ -55,7 +56,7 @@ int linkurls(char **str) {
 
 	for (p = *str; (p2 = strurlstr(p)); p = p2 + oldlen) {
 		oldlen = strcspn(p2, " \n\0");
-		if (endsto(p2, ".png", oldlen) || endsto(p2, ".jpg", oldlen))
+		if (endsto(p2, oldlen, ".png") || endsto(p2, oldlen, ".jpg"))
 			fmt = picfmt;
 		else
 			fmt = linkfmt;
@@ -67,7 +68,7 @@ int linkurls(char **str) {
 
 	for (p = *str, r = ret; (p2 = strurlstr(p)); p = p2 + oldlen) {
 		oldlen = strcspn(p2, " \n\0");
-		if (endsto(p2, ".png", oldlen) || endsto(p2, ".jpg", oldlen))
+		if (endsto(p2, oldlen, ".png") || endsto(p2, oldlen, ".jpg"))
 			fmt = picfmt;
 		else
 			fmt = linkfmt;
@@ -85,23 +86,31 @@ int linkurls(char **str) {
 	return retlen + 1;
 }
 
+char *getpage(char *filename) {
+	char *p;
+
+	p = filename + strlen(filename);
+	while (*--p != '/');
+	return p + 1;
+}
+
 void printmenu(char *filename) {
 	DIR *d;
 	struct dirent *dir;
 	int len;
 
 	d = opendir(".");
-	if (strstr(filename, "index.pt"))
+	if (!strcmp(getpage(filename), "index.pt"))
 		printf("<a href=\"index.pt\" class=\"activefirst\">index</a>");
 	else
 		printf("<a href=\"index.pt\" class=\"first\">index</a>");
 
 	while ((dir = readdir(d))) {
 		len = strlen(dir->d_name);
-		if (endsto(dir->d_name, ".pt", 0)) {
+		if (endsto(dir->d_name, 0, ".pt")) {
 			if (!strcmp(dir->d_name, "index.pt"))
 				continue;
-			if (strstr(filename, dir->d_name)) {
+			if (!strcmp(getpage(filename), dir->d_name)) {
 				printf("<a href=\"%s\" class=\"active\">%.*s</a>",
 						dir->d_name, len - 3, dir->d_name);
 			} else {
@@ -110,8 +119,17 @@ void printmenu(char *filename) {
 			}
 		}
 	}
+	putchar('\n');
 
 	closedir(d);
+}
+
+bool isdate(char *str) {
+	char *p;
+	p = str;
+	while (*p && !isalpha(*p))
+		p++;
+	return !*p;
 }
 
 bool isheader(char *str) {
@@ -122,6 +140,8 @@ bool isheader(char *str) {
 	if (strstr(str, "http://") || strstr(str, "https://"))
 		return false;
 	if (strlen(str) > 32)
+		return false;
+	if (isdate(str))
 		return false;
 	return true;
 }
@@ -142,8 +162,10 @@ int main(int argc, char **argv) {
 	stylefp = efopen(stylefile, "r");
 
 	while ((len = getline(&line, &size, stylefp)) != -1) {
-		if (!strcmp(line, "$TITLE\n"))
-			printf("%s", getenv("HTTP_HOST"));
+		if (!strcmp(line, "$HTTP_HOST\n"))
+			printf("%s\n", getenv("HTTP_HOST"));
+		else if (!strcmp(line, "$PAGE\n"))
+			printf("%s\n", getpage(argv[1]));
 		else if (!strcmp(line, "$PAGES\n"))
 			printmenu(argv[1]);
 		else if (!strcmp(line, "$CONTENT\n"))
@@ -160,6 +182,8 @@ int main(int argc, char **argv) {
 		p = line;
 		if (p[len - 1] == '\n')
 			p[len - 1] = '\0';
+		else if (p[strlen(p) - 1] == '\n')
+			p[strlen(p) - 1] = '\0';
 
 		if (!code && !strncmp(p, "$ ", 2)) {
 			puts("<pre>");
@@ -198,7 +222,6 @@ int main(int argc, char **argv) {
 		printf("%s", line);
 
 	free(line);
-	line = NULL;
 	fclose(stylefp);
 	return EXIT_SUCCESS;
 }
