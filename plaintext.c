@@ -22,6 +22,62 @@ bool endsto(char *str, int slen, char *str2) {
 	return !strncmp(str, str2, strlen(str2));
 }
 
+char *getpage(char *filename) {
+	char *p;
+	p = filename + strlen(filename);
+	while (*--p != '/');
+	return p + 1;
+}
+
+bool isdate(char *str) {
+	char *p;
+	p = str;
+	while (*p && !isalpha(*p))
+		p++;
+	return !*p;
+}
+
+bool isheader(char *str) {
+	if (str[0] == '\0')
+		return false;
+	if (str[strlen(str) - 1] == '.')
+		return false;
+	if (strstr(str, "http://") || strstr(str, "https://"))
+		return false;
+	if (isdate(str))
+		return false;
+	return true;
+}
+
+void printmenu(char *page) {
+	DIR *d;
+	struct dirent *dir;
+	int len;
+
+	d = opendir(".");
+	if (!strcmp(page, "index.pt"))
+		printf("<a href=\"index.pt\" class=\"activefirst\">index</a>");
+	else
+		printf("<a href=\"index.pt\" class=\"first\">index</a>");
+
+	while ((dir = readdir(d))) {
+		len = strlen(dir->d_name);
+		if (endsto(dir->d_name, 0, ".pt")) {
+			if (!strcmp(dir->d_name, "index.pt"))
+				continue;
+			if (!strcmp(page, dir->d_name))
+				printf("<a href=\"%s\" class=\"active\">%.*s</a>",
+						dir->d_name, len - 3, dir->d_name);
+			else
+				printf("<a href=\"%s\">%.*s</a>",
+						dir->d_name, len - 3, dir->d_name);
+		}
+	}
+	putchar('\n');
+
+	closedir(d);
+}
+
 static char *strurlstr(char *str) {
 	char *url;
 
@@ -48,9 +104,6 @@ int linkurls(char **str) {
 	char *linkfmt = "<a href=\"%.*s\">%.*s</a>";
 	char *picfmt = "<a href=\"%.*s\"><img src=\"%.*s\"></a>";
 	char *fmt;
-
-	if (!strurlstr(*str))
-		return 0;
 
 	retlen = strlen(*str);
 
@@ -86,66 +139,6 @@ int linkurls(char **str) {
 	return retlen + 1;
 }
 
-char *getpage(char *filename) {
-	char *p;
-
-	p = filename + strlen(filename);
-	while (*--p != '/');
-	return p + 1;
-}
-
-void printmenu(char *filename) {
-	DIR *d;
-	struct dirent *dir;
-	int len;
-
-	d = opendir(".");
-	if (!strcmp(getpage(filename), "index.pt"))
-		printf("<a href=\"index.pt\" class=\"activefirst\">index</a>");
-	else
-		printf("<a href=\"index.pt\" class=\"first\">index</a>");
-
-	while ((dir = readdir(d))) {
-		len = strlen(dir->d_name);
-		if (endsto(dir->d_name, 0, ".pt")) {
-			if (!strcmp(dir->d_name, "index.pt"))
-				continue;
-			if (!strcmp(getpage(filename), dir->d_name)) {
-				printf("<a href=\"%s\" class=\"active\">%.*s</a>",
-						dir->d_name, len - 3, dir->d_name);
-			} else {
-				printf("<a href=\"%s\">%.*s</a>",
-						dir->d_name, len - 3, dir->d_name);
-			}
-		}
-	}
-	putchar('\n');
-
-	closedir(d);
-}
-
-bool isdate(char *str) {
-	char *p;
-	p = str;
-	while (*p && !isalpha(*p))
-		p++;
-	return !*p;
-}
-
-bool isheader(char *str) {
-	if (str[0] == '\0')
-		return false;
-	if (str[strlen(str) - 1] == '.')
-		return false;
-	if (strstr(str, "http://") || strstr(str, "https://"))
-		return false;
-	if (strlen(str) > 32)
-		return false;
-	if (isdate(str))
-		return false;
-	return true;
-}
-
 int main(int argc, char **argv) {
 	int y;
 	FILE *fp, *stylefp;
@@ -153,11 +146,14 @@ int main(int argc, char **argv) {
 	size_t size = 0;
 	ssize_t len;
 	char *p;
-	bool code;
+	char *srcfile;
 	int heading;
+	bool empty;
+	bool code;
 
 	if (argc != 2)
 		eprintf("usage: plaintext <file>");
+	srcfile = argv[1];
 
 	stylefp = efopen(stylefile, "r");
 
@@ -165,54 +161,67 @@ int main(int argc, char **argv) {
 		if (!strcmp(line, "$HTTP_HOST\n"))
 			printf("%s\n", getenv("HTTP_HOST"));
 		else if (!strcmp(line, "$PAGE\n"))
-			printf("%s\n", getpage(argv[1]));
+			printf("%.*s\n", (int) strlen(getpage(srcfile)) - 3, getpage(srcfile));
 		else if (!strcmp(line, "$PAGES\n"))
-			printmenu(argv[1]);
+			printmenu(getpage(srcfile));
 		else if (!strcmp(line, "$CONTENT\n"))
 			break;
 		else
 			printf("%s", line);
 	}
 
-	heading = 2;
+	empty = true;
 	code = false;
-	fp = efopen(argv[1], "r");
+	fp = efopen(srcfile, "r");
 	for (y = 0; (len = getline(&line, &size, fp)) != -1; y++) {
-		size = linkurls(&line);
-		p = line;
-		if (p[len - 1] == '\n')
-			p[len - 1] = '\0';
-		else if (p[strlen(p) - 1] == '\n')
-			p[strlen(p) - 1] = '\0';
+		if (len < 2) {
+			empty = true;
+			if (code) {
+				puts("</pre>");
+				code = false;
+			}
+			puts("<br>");
+			continue;
+		}
+		line[len - 1] = '\0';
 
+		if (strurlstr(line))
+			size = linkurls(&line);
+
+		p = line;
 		if (!code && !strncmp(p, "$ ", 2)) {
 			puts("<pre>");
-			code = 1;
+			code = true;
 		} else if (code && !!strncmp(p, "$ ", 2)) {
 			puts("</pre>");
-			code = 0;
+			code = false;
 		}
 
-		if (!heading && isheader(p))
+		if (empty) {
+			heading = 2;
+			empty = false;
+		} else {
 			heading = 3;
-		if (heading && !code)
-			printf("<h%d>", heading);
-		else if (!strncmp(p, "* ", 2)) {
+		}
+		if (!isheader(p) || code)
+			heading = 0;
+
+		if (!strncmp(p, "* ", 2)) {
 			printf("<li>");
 			p += 2;
+			heading = 0;
 		}
+
+		if (heading)
+			printf("<h%d>", heading);
 
 		printf("%s", p);
 
-		if (heading && !code)
+		if (heading)
 			printf("</h%d>", heading);
 		if (!code && !heading)
-			printf("<br />");
+			printf("<br>");
 		putchar('\n');
-
-		heading = 0;
-		if (p[0] == '\0')
-			heading = 2;
 	}
 	if (code)
 		puts("</pre>");

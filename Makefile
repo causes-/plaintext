@@ -1,5 +1,5 @@
-CFLAGS+=-std=c99 -pedantic -Wall -Wextra
-PREFIX=/usr/local
+CFLAGS += -std=c99 -pedantic -Wall -Wextra
+PREFIX = /usr/local
 
 BIN = plaintext
 OBJ = plaintext.o util.o

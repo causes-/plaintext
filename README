@@ -13,9 +13,10 @@ $ make install
 * Then configure httpd like this:
 cgi.assign = ( ".pt"  => "/usr/bin/plaintext" )
 * Then put a simple style.html file to your htdocs:
-$TITLE gets replaced by site name.
+$PAGE gets replaced by the name of current page.
 $PAGES gets replaced by list of links to all pages.
 $CONTENT gets replaced by the document.
+$HTTP_HOST gets replaced by the server hostname.
 * Now just create .pt files in plain text and your site is ready to access.
 
 Syntax
