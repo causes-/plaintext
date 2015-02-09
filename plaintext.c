@@ -80,19 +80,37 @@ void printmenu(char *page) {
 
 static char *strurlstr(char *str) {
 	char *url;
+	char *first;
 
 	while (true) {
+		first = (char *) - 1;
+
+		url = strstr(str, "https://");
+		if (url && first > url)
+			first = url;
 		url = strstr(str, "http://");
-		if (!url)
-			url = strstr(str, "https://");
-		if (url)
-			if (url > str && url[-1] != ' ' && url[-1] != '\n') {
-				str = url + strcspn(url, " \n\0");
-				continue;
-			}
+		if (url && first > url)
+			first = url;
+		url = strstr(str, ".pt");
+		if (url) {
+			if (url[3] != ' ' && url[3] != '.')
+				url = NULL;
+			while (url > str && url[-1] != ' ')
+				url--;
+			if (first > url)
+				first = url;
+		}
+
+		if (first == (char *) - 1)
+			first = NULL;
+		else if (first > str && !isspace(first[-1])) {
+			str = first + strcspn(first, " \n\0");
+			continue;
+		}
 		break;
 	}
-	return url;
+
+	return first;
 }
 
 int linkurls(char **str) {
@@ -109,6 +127,8 @@ int linkurls(char **str) {
 
 	for (p = *str; (p2 = strurlstr(p)); p = p2 + oldlen) {
 		oldlen = strcspn(p2, " \n\0");
+		if (p2[oldlen - 1] == '.')
+			oldlen--;
 		if (endsto(p2, oldlen, ".png") || endsto(p2, oldlen, ".jpg"))
 			fmt = picfmt;
 		else
@@ -121,6 +141,8 @@ int linkurls(char **str) {
 
 	for (p = *str, r = ret; (p2 = strurlstr(p)); p = p2 + oldlen) {
 		oldlen = strcspn(p2, " \n\0");
+		if (p2[oldlen - 1] == '.')
+			oldlen--;
 		if (endsto(p2, oldlen, ".png") || endsto(p2, oldlen, ".jpg"))
 			fmt = picfmt;
 		else
